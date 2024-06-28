@@ -10,14 +10,17 @@
 #define SCREEN_ADDRESS 0x3C // I2C address for OLED
 #include <SoftwareSerial.h>
 #define setPin 19 //kontroler at denne er til set pin på HC12
+#define NUM_LINES 3
 
 //globale values
+int multibuton = 15;
 int targets = 2;
 String* menyArray = new String[targets +3];
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 SoftwareSerial HC12(18, 17);  //HC-12 TX pin, RX pin 
 byte incomingByte;
 String readBuffer = "";
+int lineHeight;
 
 // globale functions
 int butonPressed(int butonValue){
@@ -37,7 +40,7 @@ void buildMenu(){
   menyArray[0] = "Test all";
   menyArray[1] = "Relise all";
   for (int i = 2; i < targets + 2; i++){
-    menyArray[i] = "target " + String(i-1);
+    menyArray[i%targets+3] = "target " + String(i-1);
   } 
   menyArray[targets + 2] = "Setings";
 }
@@ -46,14 +49,22 @@ void setings(){
   //to do
   //tenken her er at en skal kunne endre antal mål og kalle på buildMeny på nytt. 
 }
-
+void drawScreen(int startPos){
+  for (int i = startPos; i < 3; i++) {
+    display.setCursor(0, i * lineHeight);
+    int get = (i + startPos) % (targets + 3);
+    display.println(menyArray[get]);
+  }
+  display.display();
+}
 void setup() {
-  
   Serial.begin(9600);
   HC12.begin(9600);
+  lineHeight = SCREEN_HEIGHT / NUM_LINES; //sets the line higth for the screen. 
   pinMode (setPin, OUTPUT);
-  digitalWrite(setPin, LOW);  //setpin to high for noraml mode tx/rx LOW to prog
   pinMode(LED_BUILTIN, OUTPUT);   // initialize digital pin LED_BUILTIN as an output.
+  pinMode(multibuton, INPUT);
+  digitalWrite(setPin, LOW);  //setpin to high for noraml mode tx/rx LOW to prog
   buildMenu();
   delay(1000); //delay to alow serial to begin. and HC12 to enter progaming mode 
 
@@ -118,32 +129,29 @@ void setup() {
 }
 void loop() {
   //oppdatere skjermen
-  int screnpos = 0; 
-  
+  int screnPos = 0; 
+  int pressed = analogRead(multibuton)
+  int thabutton = 0;
   digitalWrite(LED_BUILTIN, HIGH);  // turn the LED on (HIGH is the voltage level)
   delay(100);
-  Serial.println("//////////////");
-
   while(Serial.available()){ //If HC-12 has data 
     incomingByte = HC12.read(); //Store each incoming byte from HC-12
     readBuffer += char(incomingByte);  // Add each byte to ReadBuffer string variable
   }
+  delay(150);
+  pressed = analogRead(multibuton)
 
-  delay(200);
-  while(Serial.available()){
-    HC12.write(Serial.read());
+  // String toSend = String(targets);
+  // toSend = toSend.trim();
+  // Serial.println(toSend);
+  // HC12.write(toSend.c_str());
+  if(readBuffer != ""){
+    Serial.println(readBuffer);
   }
-  String toSend = String(targets);
-  //toSend = toSend.trim();
-  Serial.println(toSend);
-  HC12.write(toSend.c_str());
-
-  while (HC12.available()){
-    Serial.write(HC12.read());
-    Serial.println("");
-    Serial.println("***********");
+  if (pressed > 10){
+    thabutton = butonPressed(pressed)
   }
   readBuffer = "";
   digitalWrite(LED_BUILTIN, LOW); 
-  delay(1000);
+  delay(200);
 }
