@@ -21,6 +21,8 @@ SoftwareSerial HC12(18, 17);  //HC-12 TX pin, RX pin
 byte incomingByte;
 String readBuffer = "";
 int lineHeight;
+int previusMenuPos = 0;
+int screnPos = 0;
 
 // globale functions
 int butonPressed(int butonValue){
@@ -49,13 +51,32 @@ void setings(){
   //to do
   //tenken her er at en skal kunne endre antal mål og kalle på buildMeny på nytt. 
 }
-void drawScreen(int startPos){
-  for (int i = startPos; i < 3; i++) {
+void drawScreen(int startPos) {
+  display.clearDisplay();
+  for (int i = 0; i < NUM_LINES; i++) {
     display.setCursor(0, i * lineHeight);
-    int get = (i + startPos) % (targets + 3);
+    int get = (startPos + i) % (targets + 3);
     display.println(menyArray[get]);
   }
   display.display();
+}
+void testAll(){
+  //to do 
+  //ping all targes and display respons
+}
+void raisAll(){
+  //to do
+  //rais all targes, display respons
+}
+void reisOne(int targetNum){
+  HC12.write(String(targetNum) + "R"); // Send byte to HC-12
+  readBuffer = "";
+  delay(200);
+  while(Serial.available()){ //If HC-12 has data 
+    incomingByte = HC12.read(); //Store each incoming byte from HC-12
+    readBuffer += char(incomingByte);  // Add each byte to ReadBuffer string variable
+  }
+  Serial.println(readBuffer);
 }
 void setup() {
   Serial.begin(9600);
@@ -126,20 +147,46 @@ void setup() {
   display.drawBitmap(0, 0, logo_bmp, SCREEN_WIDTH, SCREEN_HEIGHT, WHITE);
   display.display();
   delay(3000); //to show off logo 
+  drawScreen(0);
 }
 void loop() {
+  // 1 = up, 2 = test/back, 3 = down, 4 = fire/ok
   //oppdatere skjermen
-  int screnPos = 0; 
-  int pressed = analogRead(multibuton)
-  int thabutton = 0;
-  digitalWrite(LED_BUILTIN, HIGH);  // turn the LED on (HIGH is the voltage level)
-  delay(100);
+  int pressed = analogRead(multibuton);
+  if (pressed > 10){
+    int thebutton = butonPressed(pressed)
+    if (thebutton == 1) {
+      screnPos = (screnPos - 1) % (targets + 3);
+      drawScreen(screnPos);
+      }
+    else if (thebutton == 3) {
+      screnPos = (screnPos + 1) % (targets + 3);
+      drawScreen(screnPos);
+      }
+    else if(thebutton == 4){
+      if (screnPos == 0){
+        testAll();
+      }
+      }
+      else if (screnPos == 1){
+        testAll();
+      }
+      else if(screnPos == targets +2){
+        setings();
+      }
+      else if(screnPos > 1 || screnPos < targets + 2){
+        
+      }
+    
+  delay(200); // Debounce delay
+  }
+  
   while(Serial.available()){ //If HC-12 has data 
     incomingByte = HC12.read(); //Store each incoming byte from HC-12
     readBuffer += char(incomingByte);  // Add each byte to ReadBuffer string variable
   }
   delay(150);
-  pressed = analogRead(multibuton)
+  pressed = analogRead(multibuton);
 
   // String toSend = String(targets);
   // toSend = toSend.trim();
@@ -148,9 +195,7 @@ void loop() {
   if(readBuffer != ""){
     Serial.println(readBuffer);
   }
-  if (pressed > 10){
-    thabutton = butonPressed(pressed)
-  }
+
   readBuffer = "";
   digitalWrite(LED_BUILTIN, LOW); 
   delay(200);
