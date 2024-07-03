@@ -68,7 +68,8 @@ void raisAll(){
   //to do
   //rais all targes, display respons
 }
-void reisOne(int targetNum){
+bool reisOne(int targetNum){
+
   HC12.write(String(targetNum) + "R"); // Send byte to HC-12
   readBuffer = "";
   delay(200);
@@ -76,8 +77,43 @@ void reisOne(int targetNum){
     incomingByte = HC12.read(); //Store each incoming byte from HC-12
     readBuffer += char(incomingByte);  // Add each byte to ReadBuffer string variable
   }
+  delay(2500);
+  if (readBuffer == ""){
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    display.println("waiting for");
+    display.print("respons");
+    display.display();
+    delay(2500);
+  }
+  else if (readBuffer == ""){
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    display.println("no respons");
+    display.print("from target");
+    display.display();
+    delay(1000);
+  }
+  else if (readBuffer == "OK"){
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    display.print("target released");
+    display.display();
+    delay(1000);
+    readBuffer = "";
   Serial.println(readBuffer);
+  readBuffer = "";
 }
+int testOne(int targetNum){
+  HC12.write(String(targetNum) + "P");
+  readBuffer = "";
+  delay(200);
+
+  while(Serial.available()){ 
+    incomingByte = HC12.read(); 
+    readBuffer += char(incomingByte);
+}
+
 void setup() {
   Serial.begin(9600);
   HC12.begin(9600);
@@ -169,15 +205,14 @@ void loop() {
       }
       }
       else if (screnPos == 1){
-        testAll();
+        raisAll();
       }
       else if(screnPos == targets +2){
         setings();
       }
       else if(screnPos > 1 || screnPos < targets + 2){
-        
+        raisOne(screnPos-1); //minus 1, sins first target is array pos 2. 
       }
-    
   delay(200); // Debounce delay
   }
   
@@ -188,10 +223,6 @@ void loop() {
   delay(150);
   pressed = analogRead(multibuton);
 
-  // String toSend = String(targets);
-  // toSend = toSend.trim();
-  // Serial.println(toSend);
-  // HC12.write(toSend.c_str());
   if(readBuffer != ""){
     Serial.println(readBuffer);
   }
