@@ -48,6 +48,14 @@ void buildMenu(){
 }
 
 void setings(){
+  screnPos = 0;
+  display.clearDisplay();
+  display.println("Setings:");
+  display.print("tagets: ");
+  display.print(targets);
+  display.display();
+
+  
   //to do
   //tenken her er at en skal kunne endre antal mål og kalle på buildMeny på nytt. 
 }
