@@ -23,6 +23,7 @@ String readBuffer = "";
 int lineHeight;
 int previusMenuPos = 0;
 int screnPos = 0;
+int pressed;
 
 // globale functions
 int butonPressed(int butonValue){
@@ -54,7 +55,37 @@ void setings(){
   display.print("tagets: ");
   display.print(targets);
   display.display();
+  pressed = butonPressed(analogRead(multibuton));
+  // 1 = up, 2 = test/back, 3 = down, 4 = fire/ok
+  unsigned long looptimerstart = millis();
+  pressed = 5; //to start the loop
+  while ((pressed % 2) = 1){
+    if (pressed = 1){
+      targets ++;
+      display.clearDisplay();
+      display.println("Setings:");
+      display.print("tagets: ");
+      display.print(targets);
+      display.display();
+      pressed = 6; // so that its not an infedent loop
+    }
+      else if (pressed = 3){
+      targets --;
+      display.clearDisplay();
+      display.println("Setings:");
+      display.print("tagets: ");
+      display.print(targets);
+      display.display();
+      pressed = 5; // so that its not an infedent loop
+    }
+    delay(200);
+    unsigned long currentmils = millis();
+    if (currentmils - looptimerstart > 10000){
+      pressed = 2; //usikker her på om en kunne satt return. 
+    }
 
+    drawScreen(); //må kalles her da den ikke kalles i loopen. 
+  }
   
   //to do
   //tenken her er at en skal kunne endre antal mål og kalle på buildMeny på nytt. 
@@ -77,15 +108,40 @@ void raisAll(){
   //rais all targes, display respons
 }
 bool reisOne(int targetNum){
+  display.clearDisplay();
+  display.println("Rais target:");
+  display.print(targetNum);
+  display.print(" ?");
+  display.display();
+
+  pressed = butonPressed(analogRead(multibuton));
+  int loopteller = 0;
+  while (pressed != 2){
+    if (pressed = 4 or loopteller > 25){ // 4 = back/cansel user has 5seconds to ack
+      drawScreen();
+      return;
+      }
+    delay(200);
+    pressed = butonPressed(analogRead(multibuton));
+    loopteller ++;
+  }
 
   HC12.write(String(targetNum) + "R"); // Send byte to HC-12
   readBuffer = "";
   delay(200);
-  while(Serial.available()){ //If HC-12 has data 
-    incomingByte = HC12.read(); //Store each incoming byte from HC-12
-    readBuffer += char(incomingByte);  // Add each byte to ReadBuffer string variable
+  int teller = 0;
+  while (teller < 20){ //the loop waits 5 sek for a reply. 
+    while(Serial.available()){ //If HC-12 has data 
+      incomingByte = HC12.read(); //Store each incoming byte from HC-12
+      readBuffer += char(incomingByte);  // Add each byte to ReadBuffer string variable
+    }
+ 
+    if (readBuffer != ""){
+      break;
+    }
+    delay(250);
+    teller++;
   }
-  delay(2500);
   if (readBuffer == ""){
     display.clearDisplay();
     display.setCursor(0, 0);
@@ -196,7 +252,7 @@ void setup() {
 void loop() {
   // 1 = up, 2 = test/back, 3 = down, 4 = fire/ok
   //oppdatere skjermen
-  int pressed = analogRead(multibuton);
+  pressed = analogRead(multibuton);
   if (pressed > 10){
     int thebutton = butonPressed(pressed)
     if (thebutton == 1) {
