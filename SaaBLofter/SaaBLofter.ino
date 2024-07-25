@@ -128,7 +128,6 @@ void loop() {
       drawScreen(screnPos);
       }
     else if(thebutton == 4){
-      /*
       if (screnPos == 0){
         testAll();
         }
@@ -136,16 +135,16 @@ void loop() {
         raisAll();
       }
       else if(screnPos == targets +2){
+        Serial.println("kaller på settings");
         setings();
       }
       else if(screnPos > 1 || screnPos < targets + 2){
         reisOne(screnPos-1); //minus 1, sins first target is array pos 2. 
       }
-      */
       Serial.print("screnpos = ");
       Serial.println(screnPos);
     }
-  delay(200); // Debounce delay
+  delay(100); // Debounce delay
   }
   
   while(Serial.available()){ //If HC-12 has data 
@@ -185,65 +184,64 @@ void buildMenu(){
   } 
   menyArray[targets + 2] = "Setings";
 }
-
-void setings(){
-  screnPos = 0;
+void drawSetings(){
   display.clearDisplay();
+  delay(100); 
+  display.setTextColor(SSD1306_WHITE); 
+  display.setCursor(0, 0); 
   display.println("Setings:");
   display.print("tagets: ");
   display.print(targets);
   display.display();
-  pressed = butonPressed(analogRead(multibuton));
+}
+void setings(){
+  Serial.println("Setings, kom hit ja");
+  screnPos = 0;
+  display.clearDisplay();
+  delay(100); // Gi skjermen litt tid til å oppdatere
+  drawSetings();
+
   // 1 = up, 2 = test/back, 3 = down, 4 = fire/ok
   unsigned long looptimerstart = millis();
   pressed = 5; //to start the loop
   while ((pressed % 2) == 1){
-    if (pressed = 1){
+    Serial.print("pressed = ");
+    Serial.println(pressed);
+    int x = analogRead(multibuton);
+    if (x > 100){
+      pressed = butonPressed(x);
+    }
+    if (pressed == 1){
       targets ++;
       looptimerstart = millis(); //restart timeout timeer
-      display.clearDisplay();
-      display.println("Setings:");
-      display.print("tagets: ");
-      display.print(targets);
-      display.display();
-      pressed = 6; // so that its not an infedent loop
-    }
-      else if (pressed = 3){
-      targets --;
-      looptimerstart = millis();
-      display.clearDisplay();
-      display.println("Setings:");
-      display.print("tagets: ");
-      display.print(targets);
-      display.display();
+      drawSetings();
       pressed = 5; // so that its not an infedent loop
     }
-    delay(200);
-    unsigned long currentmils = millis();
-    if (currentmils - looptimerstart > 10000){
-      pressed = 2; //usikker her på om en kunne satt return. 
+    else if (pressed == 3){
+      targets --;
+      looptimerstart = millis();
+      drawSetings();
+      pressed = 5; // so that its not an infedent loop
     }
+    delay(100);
+    unsigned long currentmils = millis();
 
-    drawScreen(0); //må kalles her da den ikke kalles i loopen. 
+    if (currentmils - looptimerstart > 10000){
+      break;
+    }
   }
-  
-  //to do
-  //tenken her er at en skal kunne endre antal mål og kalle på buildMeny på nytt. 
+  buildMenu();
+  delay(50);
+  drawScreen(0); //må kalles her da den ikke kalles i loopen. 
 }
 void drawScreen(int startPos) {
   display.clearDisplay();
-/*
-  for (int i = 0; i < 3; i++) {
-    display.setCursor(0, i * lineHeight);
-    int get = (startPos + i) % (targets + 3);
-    display.println(menyArray[get]);
-    Serial.print("display.print = ");
-    Serial.println(menyArray[get]);
-  }
-*/
-  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.fillRect(0, 0, 128, 16, SSD1306_WHITE);
+  display.setTextColor(SSD1306_BLACK);
   display.setCursor(0, 0);
   display.println(menyArray[startPos]);
+  display.setTextColor(SSD1306_WHITE);
   display.println(menyArray[((startPos + 1) % (targets + 3))]);
   display.println(menyArray[((startPos + 2) % (targets + 3))]);
   display.println(menyArray[((startPos + 3) % (targets + 3))]);
@@ -258,17 +256,29 @@ void raisAll(){
   //rais all targes, display respons
 }
 bool reisOne(int targetNum){
+  Serial.print("funk raisOne, targetNum = ");
+  Serial.println(targetNum);
   display.clearDisplay();
-  display.println("Rais target:");
+  delay(50); 
+  display.setTextColor(SSD1306_WHITE); 
+  display.setCursor(0, 0); 
+  display.println("Rais:");
   display.print(targetNum);
-  display.print(" ?");
+  display.println(" ?");
+  display.println("press up");
   display.display();
+  delay(200); //buton debounce
 
-  pressed = butonPressed(analogRead(multibuton));
+  pressed = 6;
   int loopteller = 0;
-  while (pressed != 2){
-    if (pressed = 4 or loopteller > 25){ // 4 = back/cansel user has 5seconds to ack
-      drawScreen(targetNum);
+  while (pressed != 1){
+    Serial.print("!= 2 loop, pressed = ");
+    Serial.print(pressed);
+    Serial.print(", loopteller =  ");
+    Serial.println(loopteller);
+    if (pressed == 2 || loopteller > 25){ // 4 = back/cansel user has 5seconds to ack
+      drawScreen(targetNum +1);
+      Serial.print("avbryter loop, return");
       return false;
       }
     delay(200);
@@ -280,8 +290,21 @@ bool reisOne(int targetNum){
   HC12.write(send.c_str()); // Send byte to HC-12
   readBuffer = "";
   delay(200);
+
   int teller = 0;
+  Serial.println("sent data. ");
+  display.clearDisplay();
+  delay(50);
+  display.setTextColor(SSD1306_WHITE); 
+  display.setCursor(0, 0); 
+  display.println("waiting");
+  display.println("for");
+  display.println("response");
+  display.display();
+  delay(100);
   while (teller < 20){ //the loop waits 5 sek for a reply. 
+    Serial.print("waiting for response from target, teller = ");
+    Serial.println(teller);
     while(Serial.available()){ //If HC-12 has data 
       incomingByte = HC12.read(); //Store each incoming byte from HC-12
       readBuffer += char(incomingByte);  // Add each byte to ReadBuffer string variable
@@ -296,29 +319,31 @@ bool reisOne(int targetNum){
   if (readBuffer == ""){
     display.clearDisplay();
     display.setCursor(0, 0);
-    display.println("waiting for");
-    display.print("respons");
-    display.display();
-    delay(2500);
-  }
-  else if (readBuffer == ""){
-    display.clearDisplay();
-    display.setCursor(0, 0);
     display.println("no respons");
-    display.print("from target");
+    display.println("from");
+    display.println("target");
     display.display();
     delay(1000);
+    drawScreen(targetNum +1);
+    return false;
   }
   else if (readBuffer == "OK"){
     display.clearDisplay();
     display.setCursor(0, 0);
-    display.print("target released");
+    display.print("target");
+    display.print("released");
     display.display();
     delay(1000);
+    Serial.println(readBuffer);
     readBuffer = "";
-  Serial.println(readBuffer);
-  readBuffer = "";
-}
+    drawScreen(targetNum +1);
+    return true;
+  }
+  
+  else{
+    drawScreen(targetNum +1);
+    return false;
+  };
 }
 int testOne(int targetNum){
 
