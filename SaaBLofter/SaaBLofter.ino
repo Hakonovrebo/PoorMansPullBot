@@ -37,114 +37,19 @@ void setup() {
   pinMode (setPin, OUTPUT);
   pinMode(LED_BUILTIN, OUTPUT);   // initialize digital pin LED_BUILTIN as an output.
   pinMode(multibuton, INPUT_PULLDOWN);
-  digitalWrite(setPin, LOW);  //setpin to high for noraml mode tx/rx LOW to prog
   buildMenu();
-  delay(1000); //delay to alow serial to begin. and HC12 to enter progaming mode 
+  delay(500); //delay to alow serial to begin.
 
+  // printing the menu for debuging 
   for (int i = 0; i < targets + hardCodedMenuItems; i++){
     Serial.println(menyArray[i]);
   } 
 
   Serial.println("Starting setup...");
-  Serial.print("SET pin is, (TX/RX mode):");
-  Serial.println(digitalRead(setPin));
-
-  // Send AT-kommando for å tilbakestille til fabrikkinnstillinger
-  HC12.write("AT+DEFAULT");
-  delay(100);
-
-  // Read response from HC-12
-  while (HC12.available()) {
-    incomingByte = HC12.read();
-    readBuffer += char(incomingByte);
-  }
-
-  // Print the response to Serial Monitor
-  Serial.print("HC-12 Defalt Response: ");
-  Serial.println(readBuffer);
-  // Clear readBuffer for next use
-  delay(250);
-  //set TXpower tp -1
-  readBuffer = "";  
-  HC12.write("AT+P1");
-  delay(100);
-
-  // Read response from HC-12
-  while (HC12.available()) {
-    incomingByte = HC12.read();
-    readBuffer += char(incomingByte);
-  }
-
-  // Print the response to Serial Monitor
-  Serial.print("HC-12 Power Response: ");
-  Serial.println(readBuffer); //shoud be OK+P1
-  // Clear readBuffer for next use
-  readBuffer = "";
-
-//set boudrate to 2'400 for longer range
-  readBuffer = "";  
-  HC12.write("AT+B2400");
-  delay(100);
-
-  // Read response from HC-12
-  while (HC12.available()) {
-    incomingByte = HC12.read();
-    readBuffer += char(incomingByte);
-  }
-
-  // Print the response to Serial Monitor
-  Serial.print("HC-12 boude Response: ");
-  Serial.println(readBuffer); //shoud be OK+P1
-  // Clear readBuffer for next use
-  readBuffer = "";
-
-  //set FU1 
-  readBuffer = "";  
-  HC12.write("AT+FU1");
-  delay(100);
-
-  // Read response from HC-12
-  while (HC12.available()) {
-    incomingByte = HC12.read();
-    readBuffer += char(incomingByte);
-  }
-
-  // Print the response to Serial Monitor
-  Serial.print("HC-12 FU Response: ");
-  Serial.println(readBuffer); //shoud be OK+P1
-  // Clear readBuffer for next use
-  readBuffer = "";
-
-  // Sett HC-12 i normal modus
-  digitalWrite(setPin, HIGH);
-  Serial.print("SET pin is, (TX/RX mode):");
-  Serial.println(digitalRead(setPin));
-  
-  // Initialize I2C with correct pins for ESP32
-  Wire.begin(22, 23); // SDA, SCL
-
-  // initialize the OLED object
-  if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
-    Serial.println(F("SSD1306 allocation failed"));
-    for(;;); // Don't proceed, loop forever
-  }
-
-  Serial.println(F("SSD1306 initialized successfully"));
-
-  // Clear the buffer
-  display.clearDisplay();
-  display.setRotation(2); // setter rotasjonen på displayet til 180grader
-  // Display TMBN Logo!
-  Serial.println("print Logo");
-  display.clearDisplay();
-  display.drawBitmap(0, 0, logo_bmp, SCREEN_WIDTH, SCREEN_HEIGHT, WHITE);
-  display.display();
-  delay(3000); //to show off logo 
-  display.clearDisplay();
-  display.setTextSize(2);
-  display.setTextColor(SSD1306_WHITE);
-  drawScreen(0);
+  hc12Setup();
+  oledSetup();
 }
+
 void loop() {
   // 1 = up, 2 = test/back, 3 = down, 4 = fire/ok
   //oppdatere skjermen
@@ -401,4 +306,110 @@ int testOne(int targetNum){
     incomingByte = HC12.read(); 
     readBuffer += char(incomingByte);
   }
+}
+bool hc12Setup(){
+  digitalWrite(setPin, LOW);  //setpin to high for noraml mode tx/rx LOW to prog
+  delay(1000);
+  Serial.print("SET pin is, (TX/RX mode):");
+  Serial.println(digitalRead(setPin));
+
+  // Send AT-kommando for å tilbakestille til fabrikkinnstillinger
+  HC12.write("AT+DEFAULT");
+  delay(100);
+
+  // Read response from HC-12
+  while (HC12.available()) {
+    incomingByte = HC12.read();
+    readBuffer += char(incomingByte);
+  }
+
+  // Print the response to Serial Monitor
+  Serial.print("HC-12 Defalt Response: ");
+  Serial.println(readBuffer);
+  // Clear readBuffer for next use
+  delay(250);
+  //set TXpower tp -1
+  readBuffer = "";  
+  HC12.write("AT+P1");
+  delay(100);
+
+  // Read response from HC-12
+  while (HC12.available()) {
+    incomingByte = HC12.read();
+    readBuffer += char(incomingByte);
+  }
+
+  // Print the response to Serial Monitor
+  Serial.print("HC-12 Power Response: ");
+  Serial.println(readBuffer); //shoud be OK+P1
+  // Clear readBuffer for next use
+  readBuffer = "";
+
+//set boudrate to 2'400 for longer range
+  readBuffer = "";  
+  HC12.write("AT+B2400");
+  delay(100);
+
+  // Read response from HC-12
+  while (HC12.available()) {
+    incomingByte = HC12.read();
+    readBuffer += char(incomingByte);
+  }
+
+  // Print the response to Serial Monitor
+  Serial.print("HC-12 boude Response: ");
+  Serial.println(readBuffer); //shoud be OK+P1
+  // Clear readBuffer for next use
+  readBuffer = "";
+
+  //set FU1 
+  readBuffer = "";  
+  HC12.write("AT+FU1");
+  delay(100);
+
+  // Read response from HC-12
+  while (HC12.available()) {
+    incomingByte = HC12.read();
+    readBuffer += char(incomingByte);
+  }
+
+  // Print the response to Serial Monitor
+  Serial.print("HC-12 FU Response: ");
+  Serial.println(readBuffer); //shoud be OK+P1
+  // Clear readBuffer for next use
+  readBuffer = "";
+
+  // Sett HC-12 i normal modus
+  digitalWrite(setPin, HIGH);
+  Serial.print("SET pin is, (TX/RX mode):");
+  Serial.println(digitalRead(setPin));
+  }
+  return digitalRead(setPin); //her er tanken og få på tre tester som går gjennom at HC12 er satt opp korekt og ev restarte alt om ikke alt av setup går gjennom 
+
+bool oledSetup(){
+  // Initialize I2C with correct pins for ESP32
+  Wire.begin(22, 23); // SDA, SCL
+
+  // initialize the OLED object
+  if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
+    Serial.println(F("SSD1306 allocation failed"));
+    for(;;); // Don't proceed, loop forever
+  }
+
+  Serial.println(F("SSD1306 initialized successfully"));
+
+  // Clear the buffer
+  display.clearDisplay();
+  display.setRotation(2); // setter rotasjonen på displayet til 180grader
+  // Display TMBN Logo!
+  Serial.println("print Logo");
+  display.clearDisplay();
+  display.drawBitmap(0, 0, logo_bmp, SCREEN_WIDTH, SCREEN_HEIGHT, WHITE);
+  display.display();
+  delay(3000); //to show off logo 
+  display.clearDisplay();
+  display.setTextSize(2);
+  display.setTextColor(SSD1306_WHITE);
+  drawScreen(0);
+  return true; //not shure how to confirm setup compleet
 }
