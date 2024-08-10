@@ -15,10 +15,10 @@ String readBuffer = "";
 void setup() {
   //deactivating bt and wifi
   btStop();
-  WiFi.mode(WIFI_OFF);
+  //WiFi.mode(WIFI_OFF);
 
   Serial.begin(9600);
-  HC12.begin(9600);
+  HC12.begin(2400);
   pinMode(setPin, OUTPUT);
   pinMode(buzzer, OUTPUT);
   digitalWrite(setPin, LOW);  // set pin to low for programming mode
@@ -26,7 +26,8 @@ void setup() {
 
   // Print a startup message
   Serial.println("Starting setup...");
-
+  Serial.print("SET pin is, (TX/RX mode):");
+  Serial.println(digitalRead(setPin));
   // Send AT-kommando for å tilbakestille til fabrikkinnstillinger
   HC12.write("AT+DEFAULT");
   delay(100);
@@ -71,7 +72,7 @@ void setup() {
   }
 
   // Print the response to Serial Monitor
-  Serial.print("HC-12 Power Response: ");
+  Serial.print("HC-12 boude Response: ");
   Serial.println(readBuffer); //shoud be OK+P1
   // Clear readBuffer for next use
   readBuffer = "";
@@ -95,8 +96,8 @@ void setup() {
 
   // Sett HC-12 i normal modus
   digitalWrite(setPin, HIGH);
-  Serial.println("SET pin is, (TX/RX mode):");
-  Serial.print(setPin);
+  Serial.print("SET pin is, (TX/RX mode):");
+  Serial.println(digitalRead(setPin));
 
   pinMode(LED_BUILTIN, OUTPUT);
   
@@ -115,7 +116,7 @@ void loop() {
     incomingByte = HC12.read();
     readBuffer += char(incomingByte);
   }
-  delay(100);
+  delay(200);
 
   if (readBuffer != "") {
     Serial.println("******************");
@@ -124,28 +125,59 @@ void loop() {
 
     if (readBuffer[0] == targetnumber){
       if (readBuffer[1] == 'R'){
-        myServo.write(90);
+        //myServo.write(80);
         digitalWrite(buzzer, HIGH);
-        reply(true);
-        delay(5000);
-        myServo.write(0);
+        sendReplay(1);
+        delay(500);
+        //myServo.write(0);
         digitalWrite(buzzer, LOW); 
       }
       else if (readBuffer[1] == 'P'){
-        reply(true);
+        sendReplay(1);
       }
       else {
-        reply(false);
+        sendReplay(0);
       }
     }
   }
   readBuffer = "";
+  delay(200);
 }
-void reply(bool x){
+void sendReplay(bool x){
   if (x){
-
+    String send = targetnumber +"OK";
+    Serial.println(send);
+    HC12.write(send.c_str());
+    delay(200);
   }
   else {
-
+    String send = targetnumber +"ERROR";
+    HC12.write(send.c_str());
+    delay(200);
   }
 }
+/*
+0x1 (POWERON_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+configsip: Starting setup...
+SET pin is, (TX/RX mode):0
+HC-12 Defalt Response: OK+DEFAULT
+HC-12 Power Response: 
+OK+P1
+HC-12 boude Response: OK+B2400
+
+HC-12 FU Response: OK+FU1
+
+SET pin is, (TX/RX mode):1
+Setup completed.
+******************
+Mottok = 1R
+%s: Target frequency %dMHz higher than supported.
+
+******************
+Mottok = 1R
+%s: Target frequency %dMHz higher than supported.
+
+******************
+Mottok = 1R
+%s: Target frequency %dMHz higher than supported.
+*/
