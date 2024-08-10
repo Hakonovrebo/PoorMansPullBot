@@ -16,7 +16,10 @@
 //globale values
 int multibuton = 15;
 int targets = 2;
-String* menyArray = new String[targets +3];
+const int hardCodedMenuItems = 3;
+const int espSerialBoud = 9600;
+const int hc12Boud = 2400; 
+String* menyArray = new String[targets + hardCodedMenuItems];
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 SoftwareSerial HC12(18, 17);  //HC-12 TX pin, RX pin 
 byte incomingByte;
@@ -28,8 +31,8 @@ int pressed;
 
 
 void setup() {
-  Serial.begin(9600);
-  HC12.begin(2400);
+  Serial.begin(espSerialBoud);
+  HC12.begin(hc12Boud);
   lineHeight = SCREEN_HEIGHT / NUM_LINES; //sets the line higth for the screen. 
   pinMode (setPin, OUTPUT);
   pinMode(LED_BUILTIN, OUTPUT);   // initialize digital pin LED_BUILTIN as an output.
@@ -38,7 +41,7 @@ void setup() {
   buildMenu();
   delay(1000); //delay to alow serial to begin. and HC12 to enter progaming mode 
 
-  for (int i = 0; i < targets + 3; i++){
+  for (int i = 0; i < targets + hardCodedMenuItems; i++){
     Serial.println(menyArray[i]);
   } 
 
