@@ -1,17 +1,16 @@
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
-
 #define OLED_RESET     -1 // Reset pin
 #define SCREEN_ADDRESS 0x3C // I2C address for OLED
-#define setPin 19 //kontroler at denne er til set pin på HC12
 #define NUM_LINES 3
 
 //globale values
-int multibuton = 15;
-int targets = 2;
+const int setPin = 19; //kontroler at denne er til set pin på HC12
 const int hardCodedMenuItems = 3;
 const int espSerialBoud = 9600;
 const int hc12Boud = 2400; 
+const int multibuton = 15; //input pin for multibuton 
+int targets = 2;
 String* menyArray = new String[targets + hardCodedMenuItems];
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 SoftwareSerial HC12(18, 17);  //HC-12 TX pin, RX pin 
@@ -20,8 +19,15 @@ String readBuffer = "";
 int lineHeight;
 int previusMenuPos = 0;
 int screnPos = 0;
-int pressed;
+int buttonInput;
 
+enum button {
+  UP,
+  DOWN,
+  RETURN_TEST,
+  OK_RELISE,
+  NONE //no buton are prest, null
+};
 
 void setup() {
   Serial.begin(espSerialBoud);
@@ -46,45 +52,55 @@ void setup() {
 void loop() {
   // 1 = up, 2 = test/back, 3 = down, 4 = fire/ok
   //oppdatere skjermen
-  pressed = analogRead(multibuton);
-  if (pressed > 100){
-    Serial.print("pressed reading = ");
-    Serial.println(pressed);
-    int thebutton = butonPressed(pressed);
+  buttonInput = analogRead(multibuton);
+  if (buttonInput > 100){
+    Serial.print("buttonInput reading = ");
+    Serial.println(buttonInput);
+    button x = butonPressed(buttonInput);
     Serial.print("buton presed = ");
-    Serial.println(thebutton);
-    if (thebutton == 1) {
-      //move the scren pos -1 the modolo didnt work sis -1 % targest + 2 != targets + 2,  hens the it/else
-      if (screnPos == 0){
-        screnPos = targets + 2;
-      }
-      else{
-        screnPos = (screnPos - 1);
-      }
-      Serial.println(screnPos);
-      drawScreen(screnPos);
-    }
-    else if (thebutton == 3) {
-      screnPos = ((screnPos + 1) % (targets + 3));
-      Serial.println(screnPos);
-      drawScreen(screnPos);
-      }
-    else if(thebutton == 4){
-      if (screnPos == 0){
-        testAll();
+    Serial.println(x);
+    switch (x)
+    {
+      case UP:  
+        //move the scren pos -1 the modolo didnt work sis -1 % targest + 2 != targets + 2,  hens the it/else
+        if (screnPos == 0){
+          screnPos = targets + 2;
         }
-      else if (screnPos == 1){
-        raisAll();
-      }
-      else if(screnPos == targets +2){
-        Serial.println("kaller på settings");
-        setings();
-      }
-      else if(screnPos > 1 && screnPos < targets + 2){ 
-        reisOne(screnPos-1); //minus 1, sins first target is array pos 2. 
-      }
-      Serial.print("screnpos = ");
-      Serial.println(screnPos);
+        else{
+          screnPos = (screnPos - 1);
+        }
+        Serial.println(screnPos);
+        drawScreen(screnPos);
+        break;
+      case DOWN:
+        screnPos = ((screnPos + 1) % (targets + 3));
+        Serial.println(screnPos);
+        drawScreen(screnPos);
+        break;
+      case OK_RELISE:
+        if (screnPos == 0){
+          testAll();
+          }
+        else if (screnPos == 1){
+          raisAll();
+        }
+        else if(screnPos == targets +2){
+          Serial.println("kaller på settings");
+          setings();
+        }
+        else if(screnPos > 1 && screnPos < targets + 2){ 
+          reisOne(screnPos-1); //minus 1, sins first target is array pos 2. 
+        }
+        Serial.print("screnpos = ");
+        Serial.println(screnPos);
+        break;
+      case RETURN_TEST:
+        if(screnPos > 1 && screnPos < targets + 2){ 
+          testOne(screnPos-1); //minus 1, sins first target is array pos 2. 
+        }
+        break;
+      case NONE:
+        break;
     }
   delay(100); // Debounce delay
   }
@@ -94,25 +110,23 @@ void loop() {
     readBuffer += char(incomingByte);  // Add each byte to ReadBuffer string variable
   }
   delay(150);
-  pressed = analogRead(multibuton);
 
   if(readBuffer != ""){
     Serial.println(readBuffer);
   }
-
   readBuffer = "";
-  delay(100);
 }
 
 // globale functions
-int butonPressed(int butonValue){
+button butonPressed(int butonValue){
   //verdiene til butonValue vil være 40950, 1926, 1276 og 946
   // dette er ved usb strøm så på batterier vil det nok vere noe lavaere
-  if(butonValue > 2000){ return 1;}
-  else if (butonValue > 1500) {return 2;}
-  else if (butonValue > 1150) {return 3;}
-  else if (butonValue < 1150 && butonValue > 250) {return 4;} // satt litt over 0 her tilfelle pull down skulle feile og sende svake signaler. 
-  else {return 0;}
+  //til fysisk prototype vil nok ikke knappene dele en input, dette vil gjøre denne funksjoen unødvendig. 
+  if(butonValue > 2000){ return button::UP;}
+  else if (butonValue > 1500) {return button::RETURN_TEST;}
+  else if (butonValue > 1150) {return button::DOWN;}
+  else if (butonValue < 1150 && butonValue > 250) {return button::OK_RELISE;} // satt litt over 0 her tilfelle pull down skulle feile og sende svake signaler. 
+  else {return button::NONE;}
 }
 void buildMenu(){
   if (menyArray != nullptr) {
@@ -145,25 +159,25 @@ void setings(){
 
   // 1 = up, 2 = test/back, 3 = down, 4 = fire/ok
   unsigned long looptimerstart = millis();
-  pressed = 5; //to start the loop
-  while ((pressed % 2) == 1){
+  button pressed = button::NONE; //to start the loop
+  while (pressed != button::RETURN_TEST){ 
     Serial.print("pressed = ");
     Serial.println(pressed);
     int x = analogRead(multibuton);
     if (x > 100){
       pressed = butonPressed(x);
     }
-    if (pressed == 1){
+    if (pressed == button::UP){
       targets ++;
       looptimerstart = millis(); //restart timeout timeer
       drawSetings();
-      pressed = 5; // so that its not an infedent loop
+      pressed = button::NONE; 
     }
-    else if (pressed == 3){
+    else if (pressed == button::DOWN){
       targets --;
       looptimerstart = millis();
       drawSetings();
-      pressed = 5; // so that its not an infedent loop
+      pressed = button::NONE; 
     }
     delay(100);
     unsigned long currentmils = millis();
@@ -211,14 +225,14 @@ bool reisOne(int targetNum){
   display.display();
   delay(200); //buton debounce
 
-  pressed = 6;
+  button pressed = NONE;
   int loopteller = 0;
-  while (pressed != 1){
+  while (pressed != button::UP){
     Serial.print("!= 2 loop, pressed = ");
     Serial.print(pressed);
     Serial.print(", loopteller =  ");
     Serial.println(loopteller);
-    if (pressed == 2 || loopteller > 25){ // 4 = back/cansel user has 5seconds to ack
+    if (pressed == button::RETURN_TEST || loopteller > 25){ // 4 = back/cansel user has 5seconds to ack
       drawScreen(targetNum +1);
       Serial.print("avbryter loop, return");
       return false;
@@ -338,7 +352,7 @@ bool hc12Setup(){
   // Clear readBuffer for next use
   readBuffer = "";
 
-//set boudrate to 2'400 for longer range
+  //set boudrate to 2'400 for longer range
   readBuffer = "";  
   HC12.write("AT+B2400");
   delay(100);
@@ -376,9 +390,8 @@ bool hc12Setup(){
   digitalWrite(setPin, HIGH);
   Serial.print("SET pin is, (TX/RX mode):");
   Serial.println(digitalRead(setPin));
-  }
   return digitalRead(setPin); //her er tanken og få på tre tester som går gjennom at HC12 er satt opp korekt og ev restarte alt om ikke alt av setup går gjennom 
-
+}
 bool oledSetup(){
   // Initialize I2C with correct pins for ESP32
   Wire.begin(22, 23); // SDA, SCL
