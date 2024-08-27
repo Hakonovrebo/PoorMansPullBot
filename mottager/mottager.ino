@@ -2,7 +2,7 @@
 #include <ESP32Servo.h>
 #define setPin 19 //kontroller at denne er til set pin på HC12
 #define buzzer 15
-#define servo 28
+#define servo 16
 
 Servo myServo;
 
@@ -33,6 +33,8 @@ void setup() {
   myServo.attach(servo);
   digitalWrite(buzzer, LOW);
   // Confirm setup completed
+  myServo.write(0);
+
   Serial.println("Setup completed.");
   Serial.flush();
 }
@@ -55,13 +57,13 @@ void loop() {
       if (readBuffer[1] == 'R'){
         myServo.write(100);
         digitalWrite(buzzer, HIGH);
-        sendReplay(true);
+        sendReplay(1);
         delay(500);
         myServo.write(0);
         digitalWrite(buzzer, LOW); 
       }
       else if (readBuffer[1] == 'P'){
-        sendReplay(true);
+        sendReplay(1);
         Serial.println("mottokk P");
       }
       else {
@@ -75,7 +77,7 @@ void loop() {
   readBuffer = "";
   delay(200);
 }
-void sendReplay(String x){
+void sendReplay(bool x){
   if (x){
     String send = String(targetnumber) +"OK";
     Serial.print("sending respons: ");
