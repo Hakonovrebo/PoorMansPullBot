@@ -1,3 +1,10 @@
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include "logo.h" //tmbn logen
+#include <SoftwareSerial.h>
+
+
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 #define OLED_RESET     -1 // Reset pin
@@ -151,13 +158,10 @@ void drawSetings(){
   display.display();
 }
 void setings(){
-  Serial.println("Setings, kom hit ja");
   screnPos = 0;
   display.clearDisplay();
   delay(100); // Gi skjermen litt tid til å oppdatere
   drawSetings();
-
-  // 1 = up, 2 = test/back, 3 = down, 4 = fire/ok
   unsigned long looptimerstart = millis();
   button pressed = button::NONE; //to start the loop
   while (pressed != button::RETURN_TEST){ 
@@ -246,7 +250,6 @@ bool reisOne(int targetNum){
   Serial.println("sender "+ send);
   HC12.write(send.c_str()); // Send byte to HC-12
   readBuffer = "";
-  delay(200);
 
   int teller = 0;
   Serial.println("sent data. ");
@@ -258,21 +261,23 @@ bool reisOne(int targetNum){
   display.println("for");
   display.println("response");
   display.display();
-  delay(100);
-  while (teller < 20){ //the loop waits 5 sek for a reply. 
-    Serial.print("waiting for response from target, teller = ");
-    Serial.println(teller);
-    while(Serial.available()){ //If HC-12 has data 
+  unsigned long timeout = millis() + 10000;
+  while (unsigned long x = millis() < timeout){ //the loop waits 5 sek for a reply. 
+    //Serial.print("waiting for response from target, teller = ");
+    //Serial.println(teller);
+    while(HC12.available()){ //If HC-12 has data 
       incomingByte = HC12.read(); //Store each incoming byte from HC-12
       readBuffer += char(incomingByte);  // Add each byte to ReadBuffer string variable
+      delay(5); // smal delay to enchur that HC12 dosent have more data incoming. 
     }
  
     if (readBuffer != ""){
+      Serial.println(readBuffer);
       break;
     }
-    delay(250);
-    teller++;
   }
+  Serial.print("readBuffer = ");
+  Serial.println(readBuffer);
   if (readBuffer == ""){
     display.clearDisplay();
     display.setCursor(0, 0);
@@ -284,23 +289,36 @@ bool reisOne(int targetNum){
     drawScreen(targetNum +1);
     return false;
   }
-  else if (readBuffer == String(targetNum)+"OK"){
-    display.clearDisplay();
-    display.setCursor(0, 0);
-    display.print("target");
-    display.print("released");
-    display.display();
-    delay(2000);
-    Serial.println(readBuffer);
-    readBuffer = "";
-    drawScreen(targetNum +1);
-    return true;
+  if (readBuffer.indexOf("1") != -1){
+    if (readBuffer.indexOf("OK") != -1){
+      display.clearDisplay();
+      display.setCursor(0, 0);
+      display.println("target");
+      display.print("released");
+      display.display();
+      delay(3000);
+      Serial.println("Target released, OK. readBuffer = ");
+      Serial.println(readBuffer);
+      readBuffer = "";
+      drawScreen(targetNum +1);
+      return true;
+    }
+    else{ 
+      Serial.println("unknown message form target. readBuffer = ");
+      display.clearDisplay();
+      display.setCursor(0, 0);
+      display.println("unknown");
+      display.println("target");
+      display.print("respons");
+      display.display();
+      Serial.println("unkown target respons, readBuffer = ");
+      Serial.println(readBuffer);
+      delay(3000);
+      readBuffer = "";
+      drawScreen(targetNum +1);
+      return false;
+    }
   }
-  
-  else{
-    drawScreen(targetNum +1);
-    return false;
-  };
 }
 int testOne(int targetNum){
 
@@ -368,7 +386,7 @@ bool hc12Setup(){
   Serial.println(readBuffer); //shoud be OK+P1
   // Clear readBuffer for next use
   readBuffer = "";
-
+/*
   //set FU1 
   readBuffer = "";  
   HC12.write("AT+FU1");
@@ -385,7 +403,7 @@ bool hc12Setup(){
   Serial.println(readBuffer); //shoud be OK+P1
   // Clear readBuffer for next use
   readBuffer = "";
-
+*/
   // Sett HC-12 i normal modus
   digitalWrite(setPin, HIGH);
   Serial.print("SET pin is, (TX/RX mode):");
